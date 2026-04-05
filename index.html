@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OODIO | Professional Acoustic Analysis & 3D Simulation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        :root {
+            
+            --clr-bg-deep: #080C16; 
+            --clr-bg-panel: rgba(17, 24, 39, 0.6);
+            --clr-border: rgba(255, 255, 255, 0.15);
+            --clr-text-main: #F3F4F6;
+            --clr-text-muted: #9CA3AF;
+            --clr-logo-cyan: #1EF8F3;    
+            --clr-logo-pink: #FF2A6D;    
+            --clr-gradient-soft: linear-gradient(135deg, rgba(30, 248, 243, 0.9) 0%, rgba(208, 62, 248, 0.8) 100%);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+        body {
+            background-color: #080C16;
+            color: var(--clr-text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 30%, rgba(30, 248, 243, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 85% 60%, rgba(208, 62, 248, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
+        
+        .glass-panel {
+            background: var(--clr-bg-panel);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--clr-border);
+            border-radius: 16px;
+        }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex; justify-content: space-between; align-items: center; padding: 15px 5%;
+            background: rgba(8, 12, 22, 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid var(--clr-border);
+        }
+
+        .logo-nav { display: flex; align-items: center; gap: 12px; font-weight: 700; letter-spacing: 1px; color: #FFF; }
+        
+        /* Forces your JPG logo into a perfect circle */
+        .logo-nav img { height: 32px; width: 32px; border-radius: 50%; object-fit: cover; }
+        
+        .nav-links { display: flex; gap: 35px; }
+        .nav-links a { color: var(--clr-text-muted); text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s; }
+        .nav-links a:hover { color: var(--clr-text-main); }
+        
+        .nav-cta {
+            background: rgba(30, 248, 243, 0.1); color: var(--clr-logo-cyan); padding: 8px 20px;
+            border-radius: 20px; border: 1px solid rgba(30, 248, 243, 0.3); text-decoration: none;
+            font-size: 13px; font-weight: 700; transition: all 0.3s ease; cursor: pointer;
+        }
+        .nav-cta:hover { background: rgba(30, 248, 243, 0.2); transform: translateY(-1px); box-shadow: 0 0 15px rgba(30, 248, 243, 0.3); }
+
+        /* --- HERO SECTION --- */
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 140px 20px 60px; }
+        .hero h1 { font-size: 4rem; font-weight: 800; margin-bottom: 20px; letter-spacing: -1.5px; line-height: 1.1; color: #FFF; }
+        .hero h1 span { background-image: var(--clr-gradient-soft); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .hero p { color: var(--clr-text-muted); font-size: 1.15rem; max-width: 600px; margin-bottom: 40px; }
+
+        .btn-primary { 
+            padding: 16px 40px; border-radius: 30px; font-size: 15px; font-weight: 700; text-decoration: none;
+            background: #FFF; color: #080C16; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.15); display: inline-block; cursor: pointer; border: none;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3); }
+
+        /* --- 3D HERO CANVAS --- */
+        .hero-3d-wrapper {
+            margin-top: 50px; width: 100%; max-width: 1000px; height: 500px; position: relative;
+            border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            background: radial-gradient(circle at center, #111827 0%, #080C16 100%);
+        }
+        #hero-canvas { width: 100%; height: 100%; outline: none; display: block; }
+
+        .floating-ui {
+            position: absolute; background: rgba(8, 12, 22, 0.7); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 15px 20px;
+        }
+        .ui-top-right { top: 20px; right: 20px; text-align: right; pointer-events: none; }
+        .ui-top-left { top: 20px; left: 20px; text-align: left; pointer-events: none; }
+        .ui-bottom-center {
+            bottom: 25px; left: 50%; transform: translateX(-50%); width: 85%; max-width: 450px;
+            text-align: center; border-color: rgba(30, 248, 243, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .floating-ui .label { font-size: 11px; color: var(--clr-text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .floating-ui .value { font-size: 18px; font-weight: 600; color: #FFF; }
+        
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; margin: 15px 0; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; background: #1F2937; border-radius: 3px; }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%;
+            background: var(--clr-logo-cyan); cursor: pointer; margin-top: -7px;
+            box-shadow: 0 0 10px rgba(30, 248, 243, 0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active { transform: scale(1.2); }
+
+        /* --- PHYSICS & DSP ENGINE --- */
+        .science { padding: 100px 5%; border-top: 1px solid var(--clr-border); border-bottom: 1px solid var(--clr-border); background: rgba(17, 24, 39, 0.3); }
+        .science-container { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 60px; }
+        @media(max-width: 900px) { .science-container { flex-direction: column; } }
+        
+        .science-text { flex: 1.2; }
+        .science-text h2 { font-size: 2.2rem; margin-bottom: 20px; color: #FFF; }
+        .science-text p { color: var(--clr-text-muted); margin-bottom: 20px; font-size: 1.05rem; }
+        
+        .science-visual { flex: 0.8; display: flex; flex-direction: column; gap: 20px; width: 100%; }
+        .equation-panel { padding: 30px; border-radius: 12px; border: 1px solid var(--clr-border); background: rgba(8, 12, 22, 0.8); }
+        .equation-label { color: #8B949E; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; font-weight: bold; }
+        .equation { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 1.4rem; color: #E5E7EB; background: #000; padding: 15px; border-radius: 8px; text-align: center; }
+        .eq-highlight { color: var(--clr-logo-cyan); }
+        .eq-pink { color: var(--clr-logo-pink); }
+
+        /* --- DOWNLOADS SECTION --- */
+        .downloads { padding: 100px 5%; text-align: center; }
+        .downloads h2 { font-size: 2.5rem; margin-bottom: 15px; color: #FFF; }
+        .downloads p { color: var(--clr-text-muted); margin-bottom: 50px; font-size: 1.1rem; }
+        
+        .download-grid { display: flex; justify-content: center; gap: 30px; flex-wrap: wrap; }
+        .os-card { 
+            background: var(--clr-bg-panel); padding: 40px; border-radius: 16px; border: 1px solid var(--clr-border); 
+            width: 300px; transition: transform 0.3s ease, border-color 0.3s; 
+        }
+        .os-card:hover { transform: translateY(-5px); border-color: var(--clr-logo-cyan); }
+        .os-card h3 { font-size: 1.8rem; color: #FFF; margin-bottom: 10px; }
+        .os-card p { color: var(--clr-text-muted); font-size: 0.9rem; margin-bottom: 30px; }
+
+        footer { padding: 40px 5%; text-align: center; border-top: 1px solid var(--clr-border); }
+        .logo-footer { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; opacity: 0.8; }
+        .logo-footer img { height: 24px; width: 24px; border-radius: 50%; }
+        .footer-text { color: #6B7280; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo-nav">
+            <img src="OODIO LOGO.jpg" alt="OODIO Logo"> OODIO
+        </div>
+        <div class="nav-links">
+            <a href="#engine">DSP Physics</a>
+            <a href="#download">Download</a>
+        </div>
+        <a href="#download" class="nav-cta" style="border-radius: 6px; padding: 10px 20px;">Get the App</a>
+    </nav>
+
+    <section class="hero">
+        <h1>Master the Room. <br><span>Perfect the Sound.</span></h1>
+        <p>The premium acoustic analysis and 3D simulation workspace. Capture impulses, generate BOMs, and simulate the results before you build.</p>
+        
+        <a href="#download" class="btn-primary">Download App</a>
+        
+        <div class="hero-3d-wrapper">
+            <canvas id="hero-canvas"></canvas>
+            
+            <div class="floating-ui ui-top-left">
+                <div class="label">Virtual Nodes</div>
+                <div class="value" style="font-size: 13px; color: #FF2A6D;">● Listener Point</div>
+                <div class="value" style="font-size: 13px; color: #10B981;">■ Audio Source</div>
+            </div>
+
+            <div class="floating-ui ui-top-right">
+                <div class="label">Live Metrics</div>
+                <div class="value" id="t60-display">T60: 2.50s</div>
+            </div>
+            
+            <div class="floating-ui ui-bottom-center glass-panel">
+                <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div class="label" style="color: var(--clr-logo-cyan); font-weight: bold; font-size: 12px;">AUTO-BOM COVERAGE</div>
+                    <div class="value" id="coverage-val" style="color: var(--clr-logo-cyan);">0%</div>
+                </div>
+                
+                <input type="range" id="bom-slider" min="0" max="100" value="0">
+                
+                <button id="play-sweep-btn" class="nav-cta" style="width: 100%; padding: 14px; font-size: 14px; margin-top: 5px; background: rgba(30, 248, 243, 0.15); border: none;">
+                    ▶ PLAY AUDIO TEST
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section id="engine" class="science">
+        <div class="science-container">
+            <div class="science-text">
+                <h2>Powered by Acoustic Physics</h2>
+                <p>OODIO's core engine uses the <strong>Schroeder Integration Method</strong>. Instead of trying to read noisy, raw reflections, we mathematically convert the impulse response into a perfectly smooth energy decay curve by integrating the squared audio samples backward in time.</p>
+                <p>Once your decay time is established, the Auto-BOM algorithm utilizes the <strong>Sabine Equation</strong> to prescribe the exact square footage of acoustic panels, diffusers, and bass traps required to hit your target metrics based on your room's cubic volume.</p>
+            </div>
+            
+            <div class="science-visual">
+                <div class="equation-panel">
+                    <div class="equation-label">Sabine Reverb Formula</div>
+                    <div class="equation">T<sub>60</sub> = <span class="eq-highlight">0.161 × V</span> / A</div>
+                </div>
+                <div class="equation-panel">
+                    <div class="equation-label">Schroeder Energy Integral</div>
+                    <div class="equation">E(t) = <span class="eq-pink">∫</span> h²(τ) dτ</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="download" class="downloads">
+        <h2>Download OODIO Workspace</h2>
+        <p>Available for macOS and Windows. Free for independent engineers.</p>
+        
+        <div class="download-grid">
+            <div class="os-card">
+                <h3>Windows</h3>
+                <p>Windows 10 / 11 (64-bit)</p>
+                <a href="#" class="btn-primary" style="width: 100%;">Download .EXE</a>
+            </div>
+            
+            <div class="os-card">
+                <h3>macOS</h3>
+                <p>Apple Silicon (M1/M2) & Intel</p>
+                <a href="#" class="btn-primary" style="width: 100%;">Download .DMG</a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="logo-footer">
+            <img src="oodio logo.jpg" alt="OODIO Logo"> <span style="color:#FFF; font-weight: bold;">OODIO</span>
+        </div>
+        <p class="footer-text">© 2026 OODIO Workspace. Built by kvng Jumar.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('hero-canvas');
+            const wrapper = document.querySelector('.hero-3d-wrapper');
+            const scene = new THREE.Scene();
+            
+            const camera = new THREE.PerspectiveCamera(50, wrapper.clientWidth / wrapper.clientHeight, 0.1, 1000);
+            camera.position.set(20, 15, 20);
+            camera.lookAt(0, 0, 0);
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+            scene.add(ambientLight);
+            const pointLight = new THREE.PointLight(0xffffff, 1.0);
+            pointLight.position.set(10, 20, 10);
+            scene.add(pointLight);
+
+            const roomGeo = new THREE.BoxGeometry(20, 10, 15);
+            const wireMat = new THREE.MeshBasicMaterial({ color: 0x1EF8F3, wireframe: true, transparent: true, opacity: 0.3 });
+            const roomWireframe = new THREE.Mesh(roomGeo, wireMat);
+            scene.add(roomWireframe);
+
+            const solidMat = new THREE.MeshBasicMaterial({ color: 0x1EF8F3, transparent: true, opacity: 0, side: THREE.BackSide });
+            const roomSolid = new THREE.Mesh(roomGeo, solidMat);
+            scene.add(roomSolid);
+
+            const listenerGeo = new THREE.SphereGeometry(0.6, 32, 32);
+            const listenerMat = new THREE.MeshStandardMaterial({ color: 0xFF2A6D, emissive: 0xFF2A6D, emissiveIntensity: 0.5 });
+            const listener = new THREE.Mesh(listenerGeo, listenerMat);
+            listener.position.set(-4, -2, 3);
+            scene.add(listener);
+
+            const sourceGeo = new THREE.BoxGeometry(1, 1, 1);
+            const sourceMat = new THREE.MeshStandardMaterial({ color: 0x10B981, emissive: 0x10B981, emissiveIntensity: 0.5 });
+            const source = new THREE.Mesh(sourceGeo, sourceMat);
+            source.position.set(5, -1, -4);
+            scene.add(source);
+
+            const clock = new THREE.Clock();
+            function animate() {
+                requestAnimationFrame(animate);
+                const time = clock.getElapsedTime();
+                scene.rotation.y = time * 0.05;
+                listener.position.y = -2 + Math.sin(time * 2) * 0.2;
+                source.rotation.x = time * 0.5;
+                source.rotation.y = time * 0.3;
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                renderer.setSize(wrapper.clientWidth, wrapper.clientHeight);
+                camera.aspect = wrapper.clientWidth / wrapper.clientHeight;
+                camera.updateProjectionMatrix();
+            });
+
+            // WEB AUDIO API SIMULATOR
+            let audioCtx, masterReverbIn, masterFeedback, masterFilter;
+            let isPlaying = false;
+            let pingInterval = null;
+
+            const slider = document.getElementById('bom-slider');
+            const coverageVal = document.getElementById('coverage-val');
+            const t60Display = document.getElementById('t60-display');
+            const playBtn = document.getElementById('play-sweep-btn');
+
+            function setupAudioEngine() {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                masterReverbIn = audioCtx.createDelay();
+                masterReverbIn.delayTime.value = 0.08; 
+                masterFeedback = audioCtx.createGain();
+                masterFeedback.gain.value = 0.82; 
+                masterFilter = audioCtx.createBiquadFilter();
+                masterFilter.type = 'lowpass';
+                masterFilter.frequency.value = 7000;
+
+                masterReverbIn.connect(masterFilter);
+                masterFilter.connect(masterFeedback);
+                masterFeedback.connect(masterReverbIn);
+                masterFilter.connect(audioCtx.destination);
+            }
+
+            slider.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const percent = val / 100;
+                
+                coverageVal.innerText = val + '%';
+                solidMat.opacity = percent * 0.4;
+                
+                const mappedT60 = 2.50 - (percent * 2.20);
+                t60Display.innerText = `T60: ${mappedT60.toFixed(2)}s`;
+                t60Display.style.color = val > 70 ? '#10B981' : (val > 30 ? '#F59E0B' : '#FFF');
+
+                if (masterFeedback && masterFilter && audioCtx) {
+                    masterFeedback.gain.setTargetAtTime(0.82 - (percent * 0.70), audioCtx.currentTime, 0.1);
+                    masterFilter.frequency.setTargetAtTime(7000 - (percent * 6000), audioCtx.currentTime, 0.1);
+                }
+            });
+
+            function fireClap() {
+                if (!isPlaying) return;
+                const osc = audioCtx.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(2500, audioCtx.currentTime + 0.2);
+
+                const env = audioCtx.createGain();
+                env.gain.setValueAtTime(0, audioCtx.currentTime);
+                env.gain.linearRampToValueAtTime(0.6, audioCtx.currentTime + 0.02);
+                env.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2); 
+
+                osc.connect(env);
+                env.connect(audioCtx.destination); 
+                env.connect(masterReverbIn); 
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.3);
+
+                const origOpacity = solidMat.opacity;
+                solidMat.opacity = origOpacity + 0.4;
+                setTimeout(() => { if (solidMat) solidMat.opacity = (slider.value / 100) * 0.4; }, 150);
+            }
+
+            playBtn.addEventListener('click', () => {
+                if (!audioCtx) setupAudioEngine();
+
+                if (isPlaying) {
+                    if (audioCtx.state === 'running') audioCtx.suspend();
+                    clearInterval(pingInterval);
+                    isPlaying = false;
+                    playBtn.innerHTML = '▶ PLAY AUDIO TEST';
+                    playBtn.style.background = 'rgba(30, 248, 243, 0.15)';
+                    playBtn.style.color = 'var(--clr-logo-cyan)';
+                } else {
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    isPlaying = true;
+                    playBtn.innerHTML = '⏹ STOP AUDIO TEST';
+                    playBtn.style.background = 'rgba(255, 42, 109, 0.2)';
+                    playBtn.style.color = '#FF2A6D';
+
+                    fireClap();
+                    pingInterval = setInterval(fireClap, 2000); 
+                }
+            });
+        });
+    </script>
+</body>
+</html>
